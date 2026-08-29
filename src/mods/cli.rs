@@ -2,14 +2,15 @@ use clap::Parser;
 
 #[derive(Parser)]
 pub struct Args {
-    /// Remove a package
+    /// Remove a package. Format: category/package (e.g., editor/vim)
     #[arg(short = 'r', long = "remove", value_name = "PACKAGE")]
     pub pkgtd: Option<String>,
 
-    /// Specifies the package to install (format: category/package e.g. editor/vim)
+    /// Specifies the package to install. Format: category/package (e.g., editor/vim)
     #[arg(short = 'i', long = "install", value_name = "PACKAGE")]
     pub package: Option<String>,
 
+    /// Lists current installed packages. Format: category/package, category, or . for root (e.g., editor/vim)
     #[arg(short = 'l', long = "list", value_name = "PATH")]
     pub list: Option<String>,
 }
