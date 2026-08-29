@@ -1,13 +1,12 @@
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use colored::{self, Colorize};
 use serde::Deserialize;
-use std::{env, fs, io, path::Path, process::Command};
-
-#[derive(ValueEnum, Clone)]
-enum Channels {
-    Stable,
-    Unstable,
-}
+use std::{
+    env, fs,
+    io::{self, Write},
+    path::Path,
+    process::Command,
+};
 
 #[derive(Parser)]
 struct Args {
@@ -15,13 +14,9 @@ struct Args {
     #[arg(long = "remove", value_name = "PACKAGE")]
     pkgtd: Option<String>,
 
-    /// Specifies the package to install
+    /// Specifies the package to install (format: category/package e.g. editor/vim)
     #[arg(long = "install", value_name = "PACKAGE")]
     package: Option<String>,
-
-    /// Specifies the channel to install packages from
-    #[arg(long = "channel", value_name = "CHANNEL")]
-    channel: Channels,
 }
 
 #[derive(Deserialize)]
@@ -46,40 +41,31 @@ struct Build {
 fn main() {
     let args = Args::parse();
 
-    if let Some(pkgtd) = args.pkgtd {
-        match args.channel {
-            Channels::Unstable => remove_unstable(&pkgtd),
-            Channels::Stable => remove_stable(&pkgtd),
+    match (args.pkgtd, args.package) {
+        (Some(pkgtd), _) => {
+            remove_package(&pkgtd);
         }
-    } else {
-        match args.channel {
-            Channels::Unstable => {
-                if let Some(pkg) = args.package {
-                    install_unstable(&pkg);
-                }
-            }
-            Channels::Stable => {
-                if let Some(pkg) = args.package {
-                    install_stable(&pkg);
-                }
-            }
+        (None, Some(pkg)) => {
+            install_package(&pkg);
+        }
+        (None, None) => {
+            println!("no argument provided. --help for help");
         }
     }
 }
 
-fn install_unstable(pkg: &String) {
+fn install_package(pkg: &String) {
     // Fetching
     let pkg_fetch_url = format!(
-        "https://raw.githubusercontent.com/sre-repo/bin/refs/heads/main/unstable/{pkg}/package.toml"
+        "https://raw.githubusercontent.com/sre-repo/bin/refs/heads/main/{pkg}/package.toml"
     );
 
     println!("Trying to fetch {pkg} from {pkg_fetch_url}...");
-    println!("Channel: Unstable");
 
     let home = env::var("HOME").expect("Somehow could not find HOME environment");
     let path = format!("{home}/.srepkgs/{pkg}");
 
-    Command::new("wget")
+    Command::new("wget") // TODO: replace wget here
         .arg("-q")
         .arg("-nc")
         .arg("-P")
@@ -106,8 +92,11 @@ fn install_unstable(pkg: &String) {
             println!(
                 "{}{}",
                 "[y/n]".black().on_white(),
-                "---------------------------------------"
+                "--------------------------------------------------------------------------------------"
             );
+
+            print!("> ");
+            io::stdout().flush().unwrap();
 
             let mut choice = String::new();
             io::stdin().read_line(&mut choice).unwrap();
@@ -122,98 +111,19 @@ fn install_unstable(pkg: &String) {
                         "The following command(s) or script(s) will be run:"
                             .black()
                             .on_white(),
-                        "------------------------------------"
+                        "-----------------------------------------"
                     );
                     println!("{}", build_info);
                     println!(
                         "{}{}",
-                        "[ENTER]".black().on_white(),
-                        "-------------------------------------------------------------------------------"
-                    );
-
-                    let mut wait = String::new();
-                    io::stdin().read_line(&mut wait).unwrap();
-
-                    let install = Command::new("sh")
-                        .arg("-c")
-                        .arg(&build_info)
-                        .status()
-                        .expect("Failed to install");
-
-                    println!("Finish with code {install}");
-                }
-                _ => {}
-            }
-        }
-        Err(e) => {
-            eprintln!("Error reading package.toml: {e}");
-        }
-    }
-}
-
-fn install_stable(pkg: &str) {
-    // Fetching
-    let pkg_fetch_url = format!(
-        "https://raw.githubusercontent.com/sre-repo/bin/refs/heads/main/stable/{pkg}/package.toml"
-    );
-
-    println!("Trying to fetch {pkg} from {pkg_fetch_url}...");
-    println!("Channel: Stable");
-
-    let home = env::var("HOME").expect("Somehow could not find HOME environment");
-    let path = format!("{home}/.srepkgs/{pkg}");
-
-    Command::new("wget")
-        .arg("-q")
-        .arg("-nc")
-        .arg("-P")
-        .arg(&path)
-        .arg(&pkg_fetch_url)
-        .status()
-        .expect("Failed to download package.toml");
-
-    let read_path = format!("{path}/package.toml");
-
-    match read_package_info(read_path) {
-        Ok(pkginfo) => {
-            println!(
-                "{}{}",
-                "Do you want to download the following package?"
-                    .black()
-                    .on_white(),
-                "----------------------------------------------"
-            );
-            println!("Name: {}", pkginfo.info.name);
-            println!("Version: {}", pkginfo.info.version);
-            println!("Description: {}", pkginfo.info.description);
-            println!("Source: {}", pkginfo.info.source);
-            println!(
-                "{}{}",
-                "[y/n]".black().on_white(),
-                "---------------------------------------------------------------------------------------"
-            );
-
-            let mut choice = String::new();
-            io::stdin().read_line(&mut choice).unwrap();
-            let choice = choice.trim();
-
-            let build_info = pkginfo.build.inst;
-
-            match choice {
-                "y" | "Y" | "yes" => {
-                    println!(
-                        "{}{}",
-                        "The following command(s) or script(s) will be run:"
+                        "[ANY KEY to continue | CTRL + C to abort]"
                             .black()
                             .on_white(),
-                        "------------------------------------"
+                        "--------------------------------------------------"
                     );
-                    println!("{}", build_info);
-                    println!(
-                        "{}{}",
-                        "[ENTER]".black().on_white(),
-                        "-------------------------------------------------------------------------------"
-                    );
+
+                    print!("> ");
+                    io::stdout().flush().unwrap();
 
                     let mut wait = String::new();
                     io::stdin().read_line(&mut wait).unwrap();
@@ -242,36 +152,7 @@ fn read_package_info<P: AsRef<Path>>(path: P) -> Result<PackageFile, Box<dyn std
     Ok(info)
 }
 
-fn remove_unstable(pkg: &String) {
-    let home = env::var("HOME").expect("Somehow could not find HOME environment");
-    let package_to_delete = format!("{}/.srepkgs/{}", home, pkg);
-
-    println!(
-        "{}{}",
-        "Do you want to delete this package?".black().on_white(),
-        "--------------------------------"
-    );
-    println!("{}", package_to_delete);
-    println!(
-        "{}{}",
-        "[y/n]".black().on_white(),
-        "------------------------------------------------------"
-    );
-
-    let mut confirm = String::new();
-    io::stdin().read_line(&mut confirm).unwrap();
-    let confirm = confirm.trim();
-
-    match confirm {
-        "y" | "Y" | "yes" => {
-            println!("Deleting {pkg}");
-            fs::remove_dir_all(&package_to_delete).expect("Failed to delete file");
-        }
-        _ => {}
-    }
-}
-
-fn remove_stable(pkg: &String) {
+fn remove_package(pkg: &String) {
     let home = env::var("HOME").expect("Somehow could not find HOME environment");
     let package_to_delete = format!("{}/.srepkgs/{}", home, pkg);
     let package_to_delete = package_to_delete.trim();
