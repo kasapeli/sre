@@ -10,6 +10,6 @@ pub struct Args {
     #[arg(long = "install", value_name = "PACKAGE")]
     pub package: Option<String>,
 
-    #[arg(long = "list")]
-    pub list: bool,
+    #[arg(long = "list", value_name = "PATH")]
+    pub list: Option<String>,
 }
