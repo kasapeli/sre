@@ -2,7 +2,7 @@ use clap::Parser;
 
 #[derive(Parser)]
 pub struct Args {
-    /// Remove a package. Format: category/package (e.g., editor/vim)
+    /// Remove a package. Format: category/package (e.g., editor/vim). Removing an entire category is also possible.
     #[arg(short = 'r', long = "remove", value_name = "PACKAGE")]
     pub pkgtd: Option<String>,
 
