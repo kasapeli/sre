@@ -9,4 +9,7 @@ pub struct Args {
     /// Specifies the package to install (format: category/package e.g. editor/vim)
     #[arg(long = "install", value_name = "PACKAGE")]
     pub package: Option<String>,
+
+    #[arg(long = "list")]
+    pub list: bool,
 }
