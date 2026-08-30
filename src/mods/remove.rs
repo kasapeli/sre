@@ -4,6 +4,8 @@ use std::{env, fs, io};
 pub fn remove_package(pkg: &String) {
     let home = env::var("HOME").expect("Somehow could not find HOME environment");
     let package_to_delete = format!("{}/.srepkgs/{}", home, pkg);
+    let pkglink = format!("{}/.local/bin/{}", home, pkg);
+    
     let package_to_delete = package_to_delete.trim();
 
     println!(
@@ -26,6 +28,7 @@ pub fn remove_package(pkg: &String) {
         "y" | "Y" | "yes" => {
             println!("Deleting {pkg}");
             fs::remove_dir_all(&package_to_delete).expect("Failed to delete file");
+            fs::remove_dir_all(&pkglink).expect("Failed to delete file");
         }
         _ => {
             println!("Aborting");
