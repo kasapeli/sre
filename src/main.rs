@@ -1,4 +1,5 @@
 use clap::Parser;
+use std::process;
 
 mod mods;
 
@@ -22,6 +23,7 @@ fn main() {
         }
         _ => {
             println!("no argument provided. --help for help");
+            process::exit(1);
         }
     }
 }
