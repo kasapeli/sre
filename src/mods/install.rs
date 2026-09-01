@@ -5,6 +5,9 @@ use std::{
     process::Command,
 };
 
+// consider using the directories crate and fix this entire stuff later
+// TODO: add dependency handling
+
 use super::package::read_package_info;
 
 pub fn install_package(pkg: &String) {
@@ -15,8 +18,8 @@ pub fn install_package(pkg: &String) {
 
     println!("Trying to fetch {pkg} from {pkg_fetch_url}...");
 
-    let home = env::var("HOME").expect("Somehow could not find HOME environment");
-    let path = format!("{home}/.srepkgs/{pkg}");
+    let home = env::var("HOME").unwrap();
+    let path = format!("{home}/.srepkgs/{pkg}/package.toml");
 
     Command::new("wget") // TODO: replace wget here
         .arg("-q")
